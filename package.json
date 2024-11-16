@@ -10,9 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@mediapipe/camera_utils": "^0.3.1675466862",
-    "@mediapipe/drawing_utils": "^0.3.1675466124",
-    "@mediapipe/hands": "^0.4.1675469240",
+    "@mediapipe/camera_utils": "^0.3.1620247984",
+    "@mediapipe/control_utils": "^0.5.1625701879",
+    "@mediapipe/drawing_utils": "^0.3.1620248257",
+    "@mediapipe/hands": "^0.3.1626903359",
     "@radix-ui/react-slot": "^1.1.0",
     "@tensorflow-models/hand-pose-detection": "^2.0.1",
     "@tensorflow/tfjs-backend-wasm": "^4.22.0",
