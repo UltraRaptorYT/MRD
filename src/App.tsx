@@ -6,7 +6,7 @@ import * as drawingUtils from "@mediapipe/drawing_utils";
 const HandTracking: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  let handsInstance: Hands | null = null;
+  const handsRef = useRef<Hands | null>(null);
 
   const stopExistingStream = () => {
     if (videoRef.current?.srcObject) {
@@ -37,19 +37,23 @@ const HandTracking: React.FC = () => {
   const initializeHandTracking = async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
-    handsInstance = new Hands({
+    if (handsRef.current) {
+      handsRef.current.close();
+    }
+    const hands = new Hands({
       locateFile: (file) =>
         `https://cdn.jsdelivr.net/npm/@mediapipe/hands@${VERSION}/${file}`,
     });
 
-    handsInstance.setOptions({
-      maxNumHands: 2,
+    hands.setOptions({
       modelComplexity: 1,
       minDetectionConfidence: 0.5,
       minTrackingConfidence: 0.5,
+      maxNumHands: 6,
     });
 
-    handsInstance.onResults((results) => {
+    handsRef.current = hands;
+    hands.onResults((results) => {
       const canvas = canvasRef.current!;
       const ctx = canvas.getContext("2d")!;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -72,7 +76,7 @@ const HandTracking: React.FC = () => {
 
     const camera = new Camera(videoRef.current, {
       onFrame: async () => {
-        await handsInstance?.send({ image: videoRef.current! });
+        await hands?.send({ image: videoRef.current! });
       },
       width: 640,
       height: 480,
@@ -87,7 +91,7 @@ const HandTracking: React.FC = () => {
 
     return () => {
       stopExistingStream();
-      handsInstance?.close();
+      handsRef.current?.close();
     };
   }, []);
 
