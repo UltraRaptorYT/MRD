@@ -1,12 +1,12 @@
 import React, { useRef, useEffect } from "react";
-import { Hands, HAND_CONNECTIONS, Results } from "@mediapipe/hands";
+import { Hands as HandsClass, HAND_CONNECTIONS } from "@mediapipe/hands";
 import { Camera } from "@mediapipe/camera_utils";
 import * as drawingUtils from "@mediapipe/drawing_utils";
 
 const HandTracking: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  let handsInstance: Hands | null = null;
+  let handsInstance: HandsClass | null = null;
 
   const stopExistingStream = () => {
     if (videoRef.current?.srcObject) {
@@ -16,14 +16,12 @@ const HandTracking: React.FC = () => {
   };
 
   const setupCamera = async () => {
-    stopExistingStream(); // Stop any existing camera stream
+    stopExistingStream();
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-
-        // Wait for the video element to be ready before playing
         videoRef.current.onloadedmetadata = () => {
           videoRef.current?.play().catch((error) => {
             console.error("Error playing video:", error);
@@ -32,17 +30,14 @@ const HandTracking: React.FC = () => {
       }
     } catch (error) {
       console.error("Error accessing camera:", error);
-      alert(
-        "Unable to access your camera. Please allow camera permissions in your browser settings."
-      );
+      alert("Unable to access your camera. Please allow camera permissions.");
     }
   };
 
   const initializeHandTracking = async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
-    // Initialize MediaPipe Hands
-    handsInstance = new Hands({
+    handsInstance = new HandsClass({
       locateFile: (file) =>
         `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
     });
@@ -54,15 +49,13 @@ const HandTracking: React.FC = () => {
       minTrackingConfidence: 0.5,
     });
 
-    handsInstance.onResults((results: Results) => {
+    handsInstance.onResults((results) => {
       const canvas = canvasRef.current!;
       const ctx = canvas.getContext("2d")!;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Draw the video feed onto the canvas
       ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
 
-      // Draw hand landmarks and connections
       results.multiHandLandmarks?.forEach((landmarks) => {
         drawingUtils.drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {
           color: "#00FF00",
@@ -75,7 +68,6 @@ const HandTracking: React.FC = () => {
       });
     });
 
-    // Setup the MediaPipe camera feed
     const camera = new Camera(videoRef.current, {
       onFrame: async () => {
         await handsInstance?.send({ image: videoRef.current! });
@@ -99,12 +91,7 @@ const HandTracking: React.FC = () => {
 
   return (
     <div style={{ position: "relative" }}>
-      <video
-        ref={videoRef}
-        style={{ display: "none" }}
-        width="640"
-        height="480"
-      />
+      <video ref={videoRef} style={{ display: "none" }} />
       <canvas
         ref={canvasRef}
         width="640"
