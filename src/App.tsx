@@ -1,12 +1,12 @@
 import React, { useRef, useEffect } from "react";
-import { Hands as HandsClass, HAND_CONNECTIONS } from "@mediapipe/hands";
+import { Hands, HAND_CONNECTIONS } from "@mediapipe/hands";
 import { Camera } from "@mediapipe/camera_utils";
 import * as drawingUtils from "@mediapipe/drawing_utils";
 
 const HandTracking: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  let handsInstance: HandsClass | null = null;
+  let handsInstance: Hands | null = null;
 
   const stopExistingStream = () => {
     if (videoRef.current?.srcObject) {
@@ -37,7 +37,7 @@ const HandTracking: React.FC = () => {
   const initializeHandTracking = async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
-    handsInstance = new HandsClass({
+    handsInstance = new Hands({
       locateFile: (file) =>
         `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
     });
