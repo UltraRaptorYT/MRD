@@ -37,10 +37,6 @@ const HandTracking: React.FC = () => {
   const initializeHandTracking = async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
-    const HandsModule = await import("@mediapipe/hands");
-
-    const Hands = HandsModule.Hands || HandsModule.default;
-
     handsInstance = new Hands({
       locateFile: (file) =>
         `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
