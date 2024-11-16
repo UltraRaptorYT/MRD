@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from "react";
-import { Hands, HAND_CONNECTIONS } from "@mediapipe/hands";
+import { Hands, HAND_CONNECTIONS, VERSION } from "@mediapipe/hands";
 import { Camera } from "@mediapipe/camera_utils";
 import * as drawingUtils from "@mediapipe/drawing_utils";
 
@@ -39,7 +39,7 @@ const HandTracking: React.FC = () => {
 
     handsInstance = new Hands({
       locateFile: (file) =>
-        `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+        `https://cdn.jsdelivr.net/npm/@mediapipe/hands@${VERSION}/${file}`,
     });
 
     handsInstance.setOptions({
