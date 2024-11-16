@@ -39,7 +39,9 @@ const HandTracking: React.FC = () => {
 
     const { Hands } = await import("@mediapipe/hands");
 
-    handsInstance = new Hands({
+    let HandsConstructor = Hands;
+
+    handsInstance = new HandsConstructor({
       locateFile: (file) =>
         `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
     });
@@ -58,16 +60,18 @@ const HandTracking: React.FC = () => {
 
       ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
 
-      results.multiHandLandmarks?.forEach((landmarks: drawingUtils.NormalizedLandmarkList | undefined) => {
-        drawingUtils.drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {
-          color: "#00FF00",
-          lineWidth: 2,
-        });
-        drawingUtils.drawLandmarks(ctx, landmarks, {
-          color: "#FF0000",
-          lineWidth: 1,
-        });
-      });
+      results.multiHandLandmarks?.forEach(
+        (landmarks: drawingUtils.NormalizedLandmarkList | undefined) => {
+          drawingUtils.drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {
+            color: "#00FF00",
+            lineWidth: 2,
+          });
+          drawingUtils.drawLandmarks(ctx, landmarks, {
+            color: "#FF0000",
+            lineWidth: 1,
+          });
+        }
+      );
     });
 
     const camera = new Camera(videoRef.current, {
