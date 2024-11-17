@@ -20,31 +20,34 @@ const fingerJoints: Record<string, number[]> = {
 
 // Infinity Gauntlet Style
 const style: Record<number, { color: string; size: number }> = {
-  0: { color: "yellow", size: 15 },
-  1: { color: "gold", size: 6 },
-  2: { color: "green", size: 10 },
-  3: { color: "gold", size: 6 },
-  4: { color: "gold", size: 6 },
-  5: { color: "purple", size: 10 },
-  6: { color: "gold", size: 6 },
-  7: { color: "gold", size: 6 },
-  8: { color: "gold", size: 6 },
-  9: { color: "blue", size: 10 },
-  10: { color: "gold", size: 6 },
-  11: { color: "gold", size: 6 },
-  12: { color: "gold", size: 6 },
-  13: { color: "red", size: 10 },
-  14: { color: "gold", size: 6 },
-  15: { color: "gold", size: 6 },
-  16: { color: "gold", size: 6 },
-  17: { color: "orange", size: 10 },
-  18: { color: "gold", size: 6 },
-  19: { color: "gold", size: 6 },
-  20: { color: "gold", size: 6 },
+  0: { color: "red", size: 5 },
+  1: { color: "red", size: 5 },
+  2: { color: "red", size: 5 },
+  3: { color: "red", size: 5 },
+  4: { color: "red", size: 5 },
+  5: { color: "red", size: 5 },
+  6: { color: "red", size: 5 },
+  7: { color: "red", size: 5 },
+  8: { color: "red", size: 5 },
+  9: { color: "red", size: 5 },
+  10: { color: "red", size: 5 },
+  11: { color: "red", size: 5 },
+  12: { color: "red", size: 5 },
+  13: { color: "red", size: 5 },
+  14: { color: "red", size: 5 },
+  15: { color: "red", size: 5 },
+  16: { color: "red", size: 5 },
+  17: { color: "red", size: 5 },
+  18: { color: "red", size: 5 },
+  19: { color: "red", size: 5 },
+  20: { color: "red", size: 5 },
 };
 
 // Drawing function
-export const drawHand = (predictions: Prediction[], ctx: CanvasRenderingContext2D): void => {
+export const drawHand = (
+  predictions: Prediction[],
+  ctx: CanvasRenderingContext2D
+): void => {
   // Check if we have predictions
   if (predictions.length > 0) {
     // Loop through each prediction

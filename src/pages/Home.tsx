@@ -7,9 +7,6 @@ import "@tensorflow/tfjs-backend-cpu";
 import * as handpose from "@tensorflow-models/handpose";
 import Webcam from "react-webcam";
 import { drawHand } from "./utilities";
-import * as fp from "fingerpose";
-import victory from "./victory.png";
-import thumbs_up from "./thumbs_up.png";
 
 interface Keypoint3D {
   x: number;
@@ -19,12 +16,39 @@ interface Keypoint3D {
 
 type HandposeModel = Awaited<ReturnType<typeof handpose.load>>;
 
-function App(): JSX.Element {
+function Home(): JSX.Element {
+  const [width, setWidth] = useState(640);
+  const [height, setHeight] = useState(480);
+  const ratio = 640 / 480;
+
+  useEffect(() => {
+    const handleResize = () => {
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+
+      if (windowWidth / windowHeight > ratio) {
+        // Window is wider than the aspect ratio, so fit height
+        setHeight(windowHeight);
+        setWidth(windowHeight * ratio);
+      } else {
+        // Window is taller than the aspect ratio, so fit width
+        setWidth(windowWidth);
+        setHeight(windowWidth / ratio);
+      }
+    };
+
+    // Set initial size
+    handleResize();
+
+    // Attach the resize event listener
+    window.addEventListener("resize", handleResize);
+
+    // Cleanup the event listener on component unmount
+    return () => window.removeEventListener("resize", handleResize);
+  }, [ratio]);
+
   const webcamRef = useRef<Webcam | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  const [emoji, setEmoji] = useState<string | null>(null);
-  const images: Record<string, string> = { thumbs_up, victory };
 
   const setBackend = async () => {
     const backends = ["webgl", "wasm", "cpu"]; // Fallback order
@@ -49,7 +73,7 @@ function App(): JSX.Element {
     console.log("Handpose model loaded.");
     setInterval(() => {
       detect(net);
-    }, 10);
+    }, 1);
   };
 
   const transformLandmarks = (
@@ -77,22 +101,7 @@ function App(): JSX.Element {
       }
 
       const hand = await net.estimateHands(video);
-
-      if (hand.length > 0) {
-        const GE = new fp.GestureEstimator([
-          fp.Gestures.VictoryGesture,
-          fp.Gestures.ThumbsUpGesture,
-        ]);
-
-        const transformedLandmarks = transformLandmarks(hand[0].landmarks);
-
-        const gesture = await GE.estimate(transformedLandmarks, 4);
-        if (gesture.gestures && gesture.gestures.length > 0) {
-          const scores = gesture.gestures.map((g) => g.score);
-          const maxScoreIndex = scores.indexOf(Math.max(...scores));
-          setEmoji(gesture.gestures[maxScoreIndex].name);
-        }
-      }
+      console.log(hand);
 
       if (canvasRef.current) {
         const ctx = canvasRef.current.getContext("2d");
@@ -104,58 +113,33 @@ function App(): JSX.Element {
   };
 
   return (
-    <div className="App">
-      <header className="App-header">
+    <div className="flex items-center justify-center w-full h-full">
+      <div className="relative">
         <Webcam
           ref={webcamRef}
           style={{
-            position: "absolute",
-            marginLeft: "auto",
-            marginRight: "auto",
-            left: 0,
-            right: 0,
-            textAlign: "center",
-            zIndex: 9,
-            width: 640,
-            height: 480,
+            width: width,
+            height: height,
           }}
         />
-
         <canvas
           ref={canvasRef}
           style={{
             position: "absolute",
             marginLeft: "auto",
             marginRight: "auto",
+            top: 0,
             left: 0,
             right: 0,
             textAlign: "center",
             zIndex: 9,
-            width: 640,
-            height: 480,
+            width: width,
+            height: height,
           }}
         />
-
-        {emoji && (
-          <img
-            src={images[emoji]}
-            alt="gesture"
-            style={{
-              position: "absolute",
-              marginLeft: "auto",
-              marginRight: "auto",
-              left: 400,
-              bottom: 500,
-              right: 0,
-              textAlign: "center",
-              height: 100,
-              zIndex: 50,
-            }}
-          />
-        )}
-      </header>
+      </div>
     </div>
   );
 }
 
-export default App;
+export default Home;
