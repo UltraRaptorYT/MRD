@@ -1,6 +1,5 @@
 import React, { useRef, useEffect, useState } from "react";
-import * as pipe_hands from "@mediapipe/hands";
-import { Hands } from "@mediapipe/hands";
+import { Hands, HAND_CONNECTIONS, VERSION } from "@mediapipe/hands";
 import { Camera } from "@mediapipe/camera_utils";
 import * as drawingUtils from "@mediapipe/drawing_utils";
 
@@ -37,7 +36,7 @@ const HandTracking: React.FC = () => {
   }, [ratio]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const handsRef = useRef<pipe_hands.Hands | null>(null);
+  const handsRef = useRef<Hands | null>(null);
 
   const stopExistingStream = () => {
     if (videoRef.current?.srcObject) {
@@ -72,14 +71,13 @@ const HandTracking: React.FC = () => {
       handsRef.current.close();
     }
 
-    console.log(pipe_hands);
-    console.log(pipe_hands.Hands);
-    console.log(new pipe_hands.Hands());
-    console.log(typeof pipe_hands.Hands);
+    console.log(Hands);
+    console.log(new Hands());
+    console.log(typeof Hands);
 
     const hands = new Hands({
       locateFile: (file) =>
-        `https://cdn.jsdelivr.net/npm/@mediapipe/hands@${pipe_hands.VERSION}/${file}`,
+        `https://cdn.jsdelivr.net/npm/@mediapipe/hands@${VERSION}/${file}`,
     });
 
     console.log(hands);
@@ -100,15 +98,10 @@ const HandTracking: React.FC = () => {
 
       results.multiHandLandmarks?.forEach(
         (landmarks: drawingUtils.NormalizedLandmarkList | undefined) => {
-          drawingUtils.drawConnectors(
-            ctx,
-            landmarks,
-            pipe_hands.HAND_CONNECTIONS,
-            {
-              color: "#00FF00",
-              lineWidth: 2,
-            }
-          );
+          drawingUtils.drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {
+            color: "#00FF00",
+            lineWidth: 2,
+          });
           drawingUtils.drawLandmarks(ctx, landmarks, {
             color: "#FF0000",
             lineWidth: 1,
