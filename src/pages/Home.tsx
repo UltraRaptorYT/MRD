@@ -72,6 +72,7 @@ const HandTracking: React.FC = () => {
     }
 
     const Hands = (await import("@mediapipe/hands")).Hands;
+    console.log(Hands);
     console.log(new Hands());
     console.log(typeof Hands);
 
