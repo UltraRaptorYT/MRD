@@ -64,9 +64,6 @@ const HandTracking: React.FC = () => {
     }
   };
 
-  console.log(Hands);
-  console.log(new Hands());
-  console.log(typeof Hands);
   const initializeHandTracking = async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
