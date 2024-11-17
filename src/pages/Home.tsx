@@ -90,6 +90,7 @@ const HandTracking: React.FC = () => {
 
     handsRef.current = hands;
     hands.onResults((results) => {
+      console.log(results);
       const canvas = canvasRef.current!;
       const ctx = canvas.getContext("2d")!;
       ctx.clearRect(0, 0, canvas.width, canvas.height);

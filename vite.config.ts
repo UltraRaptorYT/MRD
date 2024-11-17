@@ -18,10 +18,20 @@ export default defineConfig({
     rollupOptions: {
       plugins: [
         terser({
-          keep_classnames: true, // Prevent class names from being mangled
-          keep_fnames: true, // Prevent function names from being mangled
+          keep_classnames: true,
+          keep_fnames: true,
         }),
       ],
+      output: {
+        manualChunks(id) {
+          if (id.includes("mediapipe")) {
+            console.log("Mediapipe chunk detected:", id);
+          }
+        },
+      },
     },
+  },
+  esbuild: {
+    keepNames: true,
   },
 });
