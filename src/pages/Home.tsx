@@ -64,6 +64,9 @@ const HandTracking: React.FC = () => {
     }
   };
 
+  console.log(Hands);
+  console.log(new Hands());
+  console.log(typeof Hands);
   const initializeHandTracking = async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
@@ -71,7 +74,7 @@ const HandTracking: React.FC = () => {
       handsRef.current.close();
     }
 
-    console.log(Hands);
+    const Hands = (await import("@mediapipe/hands")).Hands;
     console.log(new Hands());
     console.log(typeof Hands);
 
