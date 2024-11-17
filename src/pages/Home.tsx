@@ -77,7 +77,7 @@ const HandTracking: React.FC = () => {
     console.log(typeof pipe_hands.Hands);
 
     const hands = new pipe_hands.Hands({
-      locateFile: (file) =>
+      locateFile: (file: string) =>
         `https://cdn.jsdelivr.net/npm/@mediapipe/hands@${pipe_hands.VERSION}/${file}`,
     });
 
