@@ -71,12 +71,11 @@ const HandTracking: React.FC = () => {
       handsRef.current.close();
     }
 
-    const Hands = (await import("@mediapipe/hands")).Hands;
-    console.log(Hands);
-    console.log(new Hands());
+    const mediapipe = await import("@mediapipe/hands");
+    console.log(mediapipe.Hands);
     console.log(typeof Hands);
 
-    const hands = new Hands({
+    const hands = new mediapipe.Hands({
       locateFile: (file) =>
         `https://cdn.jsdelivr.net/npm/@mediapipe/hands@${VERSION}/${file}`,
     });
