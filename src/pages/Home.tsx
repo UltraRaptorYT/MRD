@@ -1,154 +1,161 @@
-import React, { useRef, useEffect, useState } from "react";
-import { Hands, HAND_CONNECTIONS, VERSION } from "@mediapipe/hands";
-import { Camera } from "@mediapipe/camera_utils";
-import * as drawingUtils from "@mediapipe/drawing_utils";
+import { useRef, useState, useEffect } from "react";
+import * as tf from "@tensorflow/tfjs";
+import "@tensorflow/tfjs-backend-webgl";
+import "@tensorflow/tfjs-backend-wasm";
+import "@tensorflow/tfjs-backend-cpu";
 
-const HandTracking: React.FC = () => {
-  const [hasCamera, setHasCamera] = useState(true);
-  const [width, setWidth] = useState(640);
-  const [height, setHeight] = useState(480);
-  const ratio = 640 / 480;
+import * as handpose from "@tensorflow-models/handpose";
+import Webcam from "react-webcam";
+import { drawHand } from "./utilities";
+import * as fp from "fingerpose";
+import victory from "./victory.png";
+import thumbs_up from "./thumbs_up.png";
 
-  useEffect(() => {
-    const handleResize = () => {
-      const windowWidth = window.innerWidth;
-      const windowHeight = window.innerHeight;
+interface Keypoint3D {
+  x: number;
+  y: number;
+  z: number;
+}
 
-      if (windowWidth / windowHeight > ratio) {
-        // Window is wider than the aspect ratio, so fit height
-        setHeight(windowHeight);
-        setWidth(windowHeight * ratio);
-      } else {
-        // Window is taller than the aspect ratio, so fit width
-        setWidth(windowWidth);
-        setHeight(windowWidth / ratio);
+type HandposeModel = Awaited<ReturnType<typeof handpose.load>>;
+
+function App(): JSX.Element {
+  const webcamRef = useRef<Webcam | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  const [emoji, setEmoji] = useState<string | null>(null);
+  const images: Record<string, string> = { thumbs_up, victory };
+
+  const setBackend = async () => {
+    const backends = ["webgl", "wasm", "cpu"]; // Fallback order
+    for (const backend of backends) {
+      if (tf.engine().registry[backend]) {
+        await tf.setBackend(backend);
+        const backendName = tf.getBackend();
+        console.log(`Backend set to: ${backendName}`);
+        return;
       }
-    };
-
-    // Set initial size
-    handleResize();
-
-    // Attach the resize event listener
-    window.addEventListener("resize", handleResize);
-
-    // Cleanup the event listener on component unmount
-    return () => window.removeEventListener("resize", handleResize);
-  }, [ratio]);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const handsRef = useRef<Hands | null>(null);
-
-  const stopExistingStream = () => {
-    if (videoRef.current?.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach((track) => track.stop());
     }
-  };
-
-  const setupCamera = async () => {
-    stopExistingStream();
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play().catch((error) => {
-            console.error("Error playing video:", error);
-          });
-        };
-      }
-    } catch (error) {
-      console.error("Error accessing camera:", error);
-      setHasCamera(false);
-    }
-  };
-
-  const initializeHandTracking = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    if (handsRef.current) {
-      handsRef.current.close();
-    }
-
-    const mediapipe = await import("@mediapipe/hands");
-    console.log(mediapipe.Hands);
-    console.log(typeof Hands);
-
-    const hands = new mediapipe.Hands({
-      locateFile: (file) =>
-        `https://cdn.jsdelivr.net/npm/@mediapipe/hands@${VERSION}/${file}`,
-    });
-
-    console.log(hands);
-    hands.setOptions({
-      modelComplexity: 1,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5,
-      maxNumHands: 6,
-    });
-
-    handsRef.current = hands;
-    hands.onResults((results) => {
-      console.log(results);
-      const canvas = canvasRef.current!;
-      const ctx = canvas.getContext("2d")!;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
-
-      results.multiHandLandmarks?.forEach(
-        (landmarks: drawingUtils.NormalizedLandmarkList | undefined) => {
-          drawingUtils.drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {
-            color: "#00FF00",
-            lineWidth: 2,
-          });
-          drawingUtils.drawLandmarks(ctx, landmarks, {
-            color: "#FF0000",
-            lineWidth: 1,
-          });
-        }
-      );
-    });
-
-    const camera = new Camera(videoRef.current, {
-      onFrame: async () => {
-        await hands?.send({ image: videoRef.current! });
-      },
-      width: width,
-      height: height,
-    });
-
-    camera.start();
+    console.error("No supported backend found.");
   };
 
   useEffect(() => {
-    setupCamera();
-    initializeHandTracking();
-
-    return () => {
-      stopExistingStream();
-      handsRef.current?.close();
-    };
+    setBackend();
+    runHandpose();
   }, []);
 
+  const runHandpose = async () => {
+    const net: HandposeModel = await handpose.load();
+    console.log("Handpose model loaded.");
+    setInterval(() => {
+      detect(net);
+    }, 10);
+  };
+
+  const transformLandmarks = (
+    landmarks: handpose.AnnotatedPrediction["landmarks"]
+  ): Keypoint3D[] => {
+    return landmarks.map(([x, y, z]) => ({ x, y, z }));
+  };
+
+  const detect = async (net: HandposeModel) => {
+    if (
+      webcamRef.current &&
+      webcamRef.current.video &&
+      webcamRef.current.video.readyState === 4
+    ) {
+      const video = webcamRef.current.video;
+      const videoWidth = video.videoWidth;
+      const videoHeight = video.videoHeight;
+
+      video.width = videoWidth;
+      video.height = videoHeight;
+
+      if (canvasRef.current) {
+        canvasRef.current.width = videoWidth;
+        canvasRef.current.height = videoHeight;
+      }
+
+      const hand = await net.estimateHands(video);
+
+      if (hand.length > 0) {
+        const GE = new fp.GestureEstimator([
+          fp.Gestures.VictoryGesture,
+          fp.Gestures.ThumbsUpGesture,
+        ]);
+
+        const transformedLandmarks = transformLandmarks(hand[0].landmarks);
+
+        const gesture = await GE.estimate(transformedLandmarks, 4);
+        if (gesture.gestures && gesture.gestures.length > 0) {
+          const scores = gesture.gestures.map((g) => g.score);
+          const maxScoreIndex = scores.indexOf(Math.max(...scores));
+          setEmoji(gesture.gestures[maxScoreIndex].name);
+        }
+      }
+
+      if (canvasRef.current) {
+        const ctx = canvasRef.current.getContext("2d");
+        if (ctx) {
+          drawHand(hand, ctx);
+        }
+      }
+    }
+  };
+
   return (
-    <div className="flex justify-center items-center w-full h-full">
-      {hasCamera ? (
-        <div className="relative w-fit h-auto">
-          <video ref={videoRef} width={width} height={height} />
-          <canvas
-            ref={canvasRef}
-            width={width}
-            height={height}
-            className="absolute top-0 left-0"
+    <div className="App">
+      <header className="App-header">
+        <Webcam
+          ref={webcamRef}
+          style={{
+            position: "absolute",
+            marginLeft: "auto",
+            marginRight: "auto",
+            left: 0,
+            right: 0,
+            textAlign: "center",
+            zIndex: 9,
+            width: 640,
+            height: 480,
+          }}
+        />
+
+        <canvas
+          ref={canvasRef}
+          style={{
+            position: "absolute",
+            marginLeft: "auto",
+            marginRight: "auto",
+            left: 0,
+            right: 0,
+            textAlign: "center",
+            zIndex: 9,
+            width: 640,
+            height: 480,
+          }}
+        />
+
+        {emoji && (
+          <img
+            src={images[emoji]}
+            alt="gesture"
+            style={{
+              position: "absolute",
+              marginLeft: "auto",
+              marginRight: "auto",
+              left: 400,
+              bottom: 500,
+              right: 0,
+              textAlign: "center",
+              height: 100,
+              zIndex: 50,
+            }}
           />
-        </div>
-      ) : (
-        <div>No Camera Found</div>
-      )}
+        )}
+      </header>
     </div>
   );
-};
+}
 
-export default HandTracking;
+export default App;
