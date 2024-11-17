@@ -2,7 +2,7 @@ import { Outlet } from "react-router-dom";
 
 function Layout() {
   return (
-    <main className="fullHeight flex dark:text-white text-black w-full">
+    <main className="fullHeight flex w-full">
       <div className="grow w-full">
         <Outlet />
       </div>

@@ -4,6 +4,7 @@ import { Camera } from "@mediapipe/camera_utils";
 import * as drawingUtils from "@mediapipe/drawing_utils";
 
 const HandTracking: React.FC = () => {
+  const [hasCamera, setHasCamera] = useState(true);
   const [width, setWidth] = useState(640);
   const [height, setHeight] = useState(480);
   const ratio = 640 / 480;
@@ -59,7 +60,7 @@ const HandTracking: React.FC = () => {
       }
     } catch (error) {
       console.error("Error accessing camera:", error);
-      alert("Unable to access your camera. Please allow camera permissions.");
+      setHasCamera(false);
     }
   };
 
@@ -69,11 +70,18 @@ const HandTracking: React.FC = () => {
     if (handsRef.current) {
       handsRef.current.close();
     }
+
+    console.log(pipe_hands);
+    console.log(pipe_hands.Hands);
+    console.log(new pipe_hands.Hands());
+    console.log(typeof pipe_hands.Hands);
+
     const hands = new pipe_hands.Hands({
       locateFile: (file) =>
         `https://cdn.jsdelivr.net/npm/@mediapipe/hands@${pipe_hands.VERSION}/${file}`,
     });
 
+    console.log(hands);
     hands.setOptions({
       modelComplexity: 1,
       minDetectionConfidence: 0.5,
@@ -130,16 +138,20 @@ const HandTracking: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex justify-center items-center w-full">
-      <div className="relative w-fit h-auto">
-        <video ref={videoRef} width={width} height={height} />
-        <canvas
-          ref={canvasRef}
-          width={width}
-          height={height}
-          className="absolute top-0 left-0"
-        />
-      </div>
+    <div className="flex justify-center items-center w-full h-full">
+      {hasCamera ? (
+        <div className="relative w-fit h-auto">
+          <video ref={videoRef} width={width} height={height} />
+          <canvas
+            ref={canvasRef}
+            width={width}
+            height={height}
+            className="absolute top-0 left-0"
+          />
+        </div>
+      ) : (
+        <div>No Camera Found</div>
+      )}
     </div>
   );
 };
