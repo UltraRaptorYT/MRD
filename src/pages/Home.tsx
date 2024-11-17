@@ -76,12 +76,6 @@ function Home(): JSX.Element {
     }, 1);
   };
 
-  const transformLandmarks = (
-    landmarks: handpose.AnnotatedPrediction["landmarks"]
-  ): Keypoint3D[] => {
-    return landmarks.map(([x, y, z]) => ({ x, y, z }));
-  };
-
   const detect = async (net: HandposeModel) => {
     if (
       webcamRef.current &&
