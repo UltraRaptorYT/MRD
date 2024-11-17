@@ -8,12 +8,6 @@ import * as handpose from "@tensorflow-models/handpose";
 import Webcam from "react-webcam";
 import { drawHand } from "./utilities";
 
-interface Keypoint3D {
-  x: number;
-  y: number;
-  z: number;
-}
-
 type HandposeModel = Awaited<ReturnType<typeof handpose.load>>;
 
 function Home(): JSX.Element {
