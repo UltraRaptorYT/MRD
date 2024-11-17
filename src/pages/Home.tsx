@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import * as pipe_hands from "@mediapipe/hands";
+import { Hands } from "@mediapipe/hands";
 import { Camera } from "@mediapipe/camera_utils";
 import * as drawingUtils from "@mediapipe/drawing_utils";
 
@@ -76,8 +77,8 @@ const HandTracking: React.FC = () => {
     console.log(new pipe_hands.Hands());
     console.log(typeof pipe_hands.Hands);
 
-    const hands = new pipe_hands.Hands({
-      locateFile: (file: string) =>
+    const hands = new Hands({
+      locateFile: (file) =>
         `https://cdn.jsdelivr.net/npm/@mediapipe/hands@${pipe_hands.VERSION}/${file}`,
     });
 
