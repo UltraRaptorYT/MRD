@@ -15,20 +15,8 @@ export default defineConfig({
     include: ["@mediapipe/hands"],
   },
   build: {
-    rollupOptions: {
-      plugins: [
-        terser({
-          keep_classnames: true,
-          keep_fnames: true,
-        }),
-      ],
-      output: {
-        manualChunks(id) {
-          if (id.includes("mediapipe")) {
-            console.log("Mediapipe chunk detected:", id);
-          }
-        },
-      },
+    commonjsOptions: {
+      include: [/mediapipe/, /node_modules/],
     },
   },
   esbuild: {
