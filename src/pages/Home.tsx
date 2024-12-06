@@ -71,11 +71,11 @@ export default function Home() {
   useEffect(() => {
     const holistic = new Holistic({
       locateFile: (file: string) => {
+        console.log(file);
         return `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`;
       },
     });
     holistic.setOptions({
-      selfieMode: true,
       modelComplexity: 1,
       smoothLandmarks: true,
       enableSegmentation: true,
