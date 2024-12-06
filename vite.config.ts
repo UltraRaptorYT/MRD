@@ -11,13 +11,17 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ["@mediapipe/hands"],
+    exclude: ["@mediapipe/holistic"],
   },
   build: {
     commonjsOptions: {
       include: [/mediapipe/, /node_modules/],
     },
-    minify: false,
+    rollupOptions: {
+      output: {
+        format: "esm",
+      },
+    },
   },
   esbuild: {
     keepNames: true,
