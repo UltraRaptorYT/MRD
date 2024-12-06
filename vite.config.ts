@@ -17,6 +17,7 @@ export default defineConfig({
     commonjsOptions: {
       include: [/mediapipe/, /node_modules/],
     },
+    minify: false,
   },
   esbuild: {
     keepNames: true,
