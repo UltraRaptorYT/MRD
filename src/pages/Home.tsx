@@ -1,133 +1,137 @@
-import { useRef, useState, useEffect } from "react";
-import * as tf from "@tensorflow/tfjs";
-import "@tensorflow/tfjs-backend-webgl";
-import "@tensorflow/tfjs-backend-wasm";
-import "@tensorflow/tfjs-backend-cpu";
-
-import * as handpose from "@tensorflow-models/handpose";
+import { useEffect, useRef } from "react";
 import Webcam from "react-webcam";
-import { drawHand } from "./utilities";
+import { Camera } from "@mediapipe/camera_utils";
+import {
+  FACEMESH_TESSELATION,
+  HAND_CONNECTIONS,
+  Holistic,
+  Results,
+} from "@mediapipe/holistic";
+import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
 
-type HandposeModel = Awaited<ReturnType<typeof handpose.load>>;
+export default function Home() {
+  const webcamRef = useRef<Webcam>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-function Home(): JSX.Element {
-  const [width, setWidth] = useState(640);
-  const [height, setHeight] = useState(480);
-  const ratio = 640 / 480;
+  const onResults = (results: Results) => {
+    if (!webcamRef.current?.video || !canvasRef.current) return;
+    const videoWidth = webcamRef.current.video.videoWidth;
+    const videoHeight = webcamRef.current.video.videoHeight;
+    canvasRef.current.width = videoWidth;
+    canvasRef.current.height = videoHeight;
 
-  useEffect(() => {
-    const handleResize = () => {
-      const windowWidth = window.innerWidth;
-      const windowHeight = window.innerHeight;
+    const canvasElement = canvasRef.current;
+    const canvasCtx = canvasElement.getContext("2d");
+    if (canvasCtx == null) throw new Error("Could not get context");
+    canvasCtx.save();
+    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
-      if (windowWidth / windowHeight > ratio) {
-        // Window is wider than the aspect ratio, so fit height
-        setHeight(windowHeight);
-        setWidth(windowHeight * ratio);
-      } else {
-        // Window is taller than the aspect ratio, so fit width
-        setWidth(windowWidth);
-        setHeight(windowWidth / ratio);
-      }
-    };
+    // Only overwrite existing pixels.
+    canvasCtx.globalCompositeOperation = "source-in";
+    canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
 
-    // Set initial size
-    handleResize();
+    // Only overwrite missing pixels.
+    canvasCtx.globalCompositeOperation = "destination-atop";
+    canvasCtx.drawImage(
+      results.image,
+      0,
+      0,
+      canvasElement.width,
+      canvasElement.height
+    );
 
-    // Attach the resize event listener
-    window.addEventListener("resize", handleResize);
-
-    // Cleanup the event listener on component unmount
-    return () => window.removeEventListener("resize", handleResize);
-  }, [ratio]);
-
-  const webcamRef = useRef<Webcam | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  const setBackend = async () => {
-    const backends = ["webgl", "wasm", "cpu"]; // Fallback order
-    for (const backend of backends) {
-      if (tf.engine().registry[backend]) {
-        await tf.setBackend(backend);
-        const backendName = tf.getBackend();
-        console.log(`Backend set to: ${backendName}`);
-        return;
-      }
-    }
-    console.error("No supported backend found.");
+    canvasCtx.globalCompositeOperation = "source-over";
+    // drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS,
+    //   {color: '#00FF00', lineWidth: 4});
+    // drawLandmarks(canvasCtx, results.poseLandmarks,
+    //   {color: '#FF0000', lineWidth: 2});
+    drawConnectors(canvasCtx, results.faceLandmarks, FACEMESH_TESSELATION, {
+      color: "#C0C0C070",
+      lineWidth: 1,
+    });
+    drawConnectors(canvasCtx, results.leftHandLandmarks, HAND_CONNECTIONS, {
+      color: "#CC0000",
+      lineWidth: 5,
+    });
+    drawLandmarks(canvasCtx, results.leftHandLandmarks, {
+      color: "#00FF00",
+      lineWidth: 2,
+    });
+    drawConnectors(canvasCtx, results.rightHandLandmarks, HAND_CONNECTIONS, {
+      color: "#00CC00",
+      lineWidth: 5,
+    });
+    drawLandmarks(canvasCtx, results.rightHandLandmarks, {
+      color: "#FF0000",
+      lineWidth: 2,
+    });
+    canvasCtx.restore();
   };
 
   useEffect(() => {
-    setBackend();
-    runHandpose();
-  }, []);
+    const holistic = new Holistic({
+      locateFile: (file: string) => {
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`;
+      },
+    });
+    holistic.setOptions({
+      selfieMode: true,
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      enableSegmentation: true,
+      smoothSegmentation: true,
+      refineFaceLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5,
+    });
+    holistic.onResults(onResults);
 
-  const runHandpose = async () => {
-    const net: HandposeModel = await handpose.load();
-    console.log("Handpose model loaded.");
-    setInterval(() => {
-      detect(net);
-    }, 1);
-  };
-
-  const detect = async (net: HandposeModel) => {
     if (
-      webcamRef.current &&
-      webcamRef.current.video &&
-      webcamRef.current.video.readyState === 4
+      typeof webcamRef.current !== "undefined" &&
+      webcamRef.current !== null
     ) {
-      const video = webcamRef.current.video;
-      const videoWidth = video.videoWidth;
-      const videoHeight = video.videoHeight;
-
-      video.width = videoWidth;
-      video.height = videoHeight;
-
-      if (canvasRef.current) {
-        canvasRef.current.width = videoWidth;
-        canvasRef.current.height = videoHeight;
-      }
-
-      const hand = await net.estimateHands(video);
-      console.log(hand);
-
-      if (canvasRef.current) {
-        const ctx = canvasRef.current.getContext("2d");
-        if (ctx) {
-          drawHand(hand, ctx);
-        }
-      }
+      if (!webcamRef.current?.video) return;
+      const camera = new Camera(webcamRef.current.video, {
+        onFrame: async () => {
+          if (!webcamRef.current?.video) return;
+          await holistic.send({ image: webcamRef.current.video });
+        },
+        width: 640,
+        height: 480,
+      });
+      camera.start();
     }
-  };
-
+  }, []);
   return (
-    <div className="flex items-center justify-center w-full h-full">
-      <div className="relative">
-        <Webcam
-          ref={webcamRef}
-          style={{
-            width: width,
-            height: height,
-          }}
-        />
-        <canvas
-          ref={canvasRef}
-          style={{
-            position: "absolute",
-            marginLeft: "auto",
-            marginRight: "auto",
-            top: 0,
-            left: 0,
-            right: 0,
-            textAlign: "center",
-            zIndex: 9,
-            width: width,
-            height: height,
-          }}
-        />
-      </div>
+    <div className="App">
+      <Webcam
+        ref={webcamRef}
+        style={{
+          position: "absolute",
+          marginLeft: "auto",
+          marginRight: "auto",
+          left: 0,
+          right: 0,
+          textAlign: "center",
+          zIndex: 9,
+          width: 1200,
+          height: 800,
+        }}
+      />
+      <canvas
+        ref={canvasRef}
+        style={{
+          position: "absolute",
+          marginLeft: "auto",
+          marginRight: "auto",
+          left: 0,
+          right: 0,
+          textAlign: "center",
+          zIndex: 9,
+          width: 1200,
+          height: 800,
+        }}
+      />
     </div>
   );
 }
-
-export default Home;
