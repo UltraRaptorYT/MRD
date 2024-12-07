@@ -1,6 +1,36 @@
-import React, { useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
-const App: React.FC = () => {
+const Home: React.FC = () => {
+  const [width, setWidth] = useState(640);
+  const [height, setHeight] = useState(480);
+  const ratio = 640 / 480;
+
+  useEffect(() => {
+    const handleResize = () => {
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+
+      if (windowWidth / windowHeight > ratio) {
+        // Window is wider than the aspect ratio, so fit height
+        setHeight(windowHeight);
+        setWidth(windowHeight * ratio);
+      } else {
+        // Window is taller than the aspect ratio, so fit width
+        setWidth(windowWidth);
+        setHeight(windowWidth / ratio);
+      }
+    };
+
+    // Set initial size
+    handleResize();
+
+    // Attach the resize event listener
+    window.addEventListener("resize", handleResize);
+
+    // Cleanup the event listener on component unmount
+    return () => window.removeEventListener("resize", handleResize);
+  }, [ratio]);
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -124,22 +154,27 @@ const App: React.FC = () => {
   };
 
   return (
-    <div>
-      <h1>MediaPipe Hands with Connections</h1>
-      <div style={{ position: "relative" }}>
+    <div className="w-full mx-auto flex justify-center items-center">
+      <div className="relative">
         <video
           ref={videoRef}
-          style={{ display: "none" }}
+          style={{ width: width, height: height }}
           playsInline
           muted
         ></video>
         <canvas
           ref={canvasRef}
-          style={{ position: "absolute", top: 0, left: 0 }}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: width,
+            height: height,
+          }}
         ></canvas>
       </div>
     </div>
   );
 };
 
-export default App;
+export default Home;
