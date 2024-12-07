@@ -2,25 +2,13 @@ import { useEffect, useRef } from "react";
 import Webcam from "react-webcam";
 import { Camera } from "@mediapipe/camera_utils";
 import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
-import {
-  FACEMESH_TESSELATION,
-  HAND_CONNECTIONS,
-  Results,
-} from "@mediapipe/holistic";
-
-declare global {
-  interface Window {
-    Holistic: any;
-  }
-}
 
 export default function Home() {
   const webcamRef = useRef<Webcam>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const onResults = (results: Results) => {
+  const onResults = (results: any) => {
     if (!webcamRef.current?.video || !canvasRef.current) return;
-
     const videoWidth = webcamRef.current.video.videoWidth;
     const videoHeight = webcamRef.current.video.videoHeight;
     canvasRef.current.width = videoWidth;
@@ -28,43 +16,57 @@ export default function Home() {
 
     const canvasElement = canvasRef.current;
     const canvasCtx = canvasElement.getContext("2d");
-    if (!canvasCtx) return;
-
+    if (!canvasCtx) throw new Error("Could not get context");
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
-    // Draw results
-    drawConnectors(canvasCtx, results.faceLandmarks, FACEMESH_TESSELATION, {
-      color: "#C0C0C070",
-      lineWidth: 1,
-    });
-    drawConnectors(canvasCtx, results.leftHandLandmarks, HAND_CONNECTIONS, {
-      color: "#CC0000",
-      lineWidth: 5,
-    });
+    // Drawing face and hands
+    drawConnectors(
+      canvasCtx,
+      results.faceLandmarks,
+      window.FACEMESH_TESSELATION,
+      {
+        color: "#C0C0C070",
+        lineWidth: 1,
+      }
+    );
+    drawConnectors(
+      canvasCtx,
+      results.leftHandLandmarks,
+      window.HAND_CONNECTIONS,
+      {
+        color: "#CC0000",
+        lineWidth: 5,
+      }
+    );
     drawLandmarks(canvasCtx, results.leftHandLandmarks, {
       color: "#00FF00",
       lineWidth: 2,
     });
-    drawConnectors(canvasCtx, results.rightHandLandmarks, HAND_CONNECTIONS, {
-      color: "#00CC00",
-      lineWidth: 5,
-    });
+    drawConnectors(
+      canvasCtx,
+      results.rightHandLandmarks,
+      window.HAND_CONNECTIONS,
+      {
+        color: "#00CC00",
+        lineWidth: 5,
+      }
+    );
     drawLandmarks(canvasCtx, results.rightHandLandmarks, {
       color: "#FF0000",
       lineWidth: 2,
     });
-
     canvasCtx.restore();
   };
 
   useEffect(() => {
     const holistic = new window.Holistic({
-      locateFile: (file: string) =>
-        `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`,
+      locateFile: (file: string) => {
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`;
+      },
     });
-
     holistic.setOptions({
+      selfieMode: true,
       modelComplexity: 1,
       smoothLandmarks: true,
       enableSegmentation: true,
@@ -73,23 +75,23 @@ export default function Home() {
       minDetectionConfidence: 0.5,
       minTrackingConfidence: 0.5,
     });
-
     holistic.onResults(onResults);
 
-    if (webcamRef.current?.video) {
+    if (
+      typeof webcamRef.current !== "undefined" &&
+      webcamRef.current !== null
+    ) {
+      if (!webcamRef.current?.video) return;
       const camera = new Camera(webcamRef.current.video, {
         onFrame: async () => {
-          await holistic.send({ image: webcamRef.current?.video });
+          if (!webcamRef.current?.video) return;
+          await holistic.send({ image: webcamRef.current.video });
         },
         width: 640,
         height: 480,
       });
       camera.start();
     }
-
-    return () => {
-      holistic.close();
-    };
   }, []);
 
   return (
