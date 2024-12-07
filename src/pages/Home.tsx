@@ -66,7 +66,7 @@ export default function Home() {
       },
     });
     holistic.setOptions({
-      selfieMode: true,
+      selfieMode: false,
       modelComplexity: 1,
       smoothLandmarks: true,
       enableSegmentation: true,
