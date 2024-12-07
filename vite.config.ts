@@ -10,17 +10,9 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  optimizeDeps: {
-    exclude: ["@mediapipe/holistic"],
-  },
   build: {
-    commonjsOptions: {
-      include: [/mediapipe/, /node_modules/],
-    },
     rollupOptions: {
-      output: {
-        format: "esm",
-      },
+      external: ["@mediapipe/holistic"],
     },
   },
   esbuild: {

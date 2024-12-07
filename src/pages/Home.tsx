@@ -69,39 +69,46 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const holistic = new Holistic({
-      locateFile: (file: string) => {
-        console.log(file);
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`;
-      },
-    });
-    holistic.setOptions({
-      modelComplexity: 1,
-      smoothLandmarks: true,
-      enableSegmentation: true,
-      smoothSegmentation: true,
-      refineFaceLandmarks: true,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5,
-    });
-    holistic.onResults(onResults);
+    let holistic: Holistic;
 
-    if (
-      typeof webcamRef.current !== "undefined" &&
-      webcamRef.current !== null
-    ) {
-      if (!webcamRef.current?.video) return;
-      const camera = new Camera(webcamRef.current.video, {
-        onFrame: async () => {
-          if (!webcamRef.current?.video) return;
-          await holistic.send({ image: webcamRef.current.video });
-        },
-        width: 640,
-        height: 480,
+    const loadHolistic = async () => {
+      const { Holistic } = await import("@mediapipe/holistic");
+      holistic = new Holistic({
+        locateFile: (file) =>
+          `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`,
       });
-      camera.start();
-    }
+      holistic.setOptions({
+        modelComplexity: 1,
+        smoothLandmarks: true,
+        enableSegmentation: true,
+        smoothSegmentation: true,
+        refineFaceLandmarks: true,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5,
+      });
+      holistic.onResults(onResults);
+
+      if (webcamRef.current?.video) {
+        const camera = new Camera(webcamRef.current.video, {
+          onFrame: async () => {
+            if (webcamRef.current?.video) {
+              await holistic.send({ image: webcamRef.current.video });
+            }
+          },
+          width: 640,
+          height: 480,
+        });
+        camera.start();
+      }
+    };
+
+    loadHolistic();
+
+    return () => {
+      if (holistic) holistic.close();
+    };
   }, []);
+
   return (
     <div className="App">
       <Webcam
