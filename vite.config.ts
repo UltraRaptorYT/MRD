@@ -14,6 +14,9 @@ export default defineConfig({
     rollupOptions: {
       external: ["@mediapipe/holistic"],
     },
+    commonjsOptions: {
+      include: [/node_modules/, /@mediapipe/],
+    },
   },
   esbuild: {
     keepNames: true,

@@ -1,13 +1,18 @@
 import { useEffect, useRef } from "react";
 import Webcam from "react-webcam";
 import { Camera } from "@mediapipe/camera_utils";
+import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
 import {
   FACEMESH_TESSELATION,
   HAND_CONNECTIONS,
-  Holistic,
   Results,
 } from "@mediapipe/holistic";
-import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
+
+declare global {
+  interface Window {
+    Holistic: any;
+  }
+}
 
 export default function Home() {
   const webcamRef = useRef<Webcam>(null);
@@ -15,6 +20,7 @@ export default function Home() {
 
   const onResults = (results: Results) => {
     if (!webcamRef.current?.video || !canvasRef.current) return;
+
     const videoWidth = webcamRef.current.video.videoWidth;
     const videoHeight = webcamRef.current.video.videoHeight;
     canvasRef.current.width = videoWidth;
@@ -22,29 +28,12 @@ export default function Home() {
 
     const canvasElement = canvasRef.current;
     const canvasCtx = canvasElement.getContext("2d");
-    if (canvasCtx == null) throw new Error("Could not get context");
+    if (!canvasCtx) return;
+
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
-    // Only overwrite existing pixels.
-    canvasCtx.globalCompositeOperation = "source-in";
-    canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
-
-    // Only overwrite missing pixels.
-    canvasCtx.globalCompositeOperation = "destination-atop";
-    canvasCtx.drawImage(
-      results.image,
-      0,
-      0,
-      canvasElement.width,
-      canvasElement.height
-    );
-
-    canvasCtx.globalCompositeOperation = "source-over";
-    // drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS,
-    //   {color: '#00FF00', lineWidth: 4});
-    // drawLandmarks(canvasCtx, results.poseLandmarks,
-    //   {color: '#FF0000', lineWidth: 2});
+    // Draw results
     drawConnectors(canvasCtx, results.faceLandmarks, FACEMESH_TESSELATION, {
       color: "#C0C0C070",
       lineWidth: 1,
@@ -65,47 +54,41 @@ export default function Home() {
       color: "#FF0000",
       lineWidth: 2,
     });
+
     canvasCtx.restore();
   };
 
   useEffect(() => {
-    let holistic: Holistic;
+    const holistic = new window.Holistic({
+      locateFile: (file: string) =>
+        `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`,
+    });
 
-    const loadHolistic = async () => {
-      const { Holistic } = await import("@mediapipe/holistic");
-      holistic = new Holistic({
-        locateFile: (file) =>
-          `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`,
+    holistic.setOptions({
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      enableSegmentation: true,
+      smoothSegmentation: true,
+      refineFaceLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5,
+    });
+
+    holistic.onResults(onResults);
+
+    if (webcamRef.current?.video) {
+      const camera = new Camera(webcamRef.current.video, {
+        onFrame: async () => {
+          await holistic.send({ image: webcamRef.current?.video });
+        },
+        width: 640,
+        height: 480,
       });
-      holistic.setOptions({
-        modelComplexity: 1,
-        smoothLandmarks: true,
-        enableSegmentation: true,
-        smoothSegmentation: true,
-        refineFaceLandmarks: true,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5,
-      });
-      holistic.onResults(onResults);
-
-      if (webcamRef.current?.video) {
-        const camera = new Camera(webcamRef.current.video, {
-          onFrame: async () => {
-            if (webcamRef.current?.video) {
-              await holistic.send({ image: webcamRef.current.video });
-            }
-          },
-          width: 640,
-          height: 480,
-        });
-        camera.start();
-      }
-    };
-
-    loadHolistic();
+      camera.start();
+    }
 
     return () => {
-      if (holistic) holistic.close();
+      holistic.close();
     };
   }, []);
 
