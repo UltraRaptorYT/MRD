@@ -4,6 +4,8 @@ const Home: React.FC = () => {
   const [width, setWidth] = useState(640);
   const [height, setHeight] = useState(480);
   const ratio = 640 / 480;
+  const buttonRef = useRef<HTMLDivElement>(null);
+  const hoverStartTime = useRef<number | null>(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -11,23 +13,17 @@ const Home: React.FC = () => {
       const windowHeight = window.innerHeight;
 
       if (windowWidth / windowHeight > ratio) {
-        // Window is wider than the aspect ratio, so fit height
         setHeight(windowHeight);
         setWidth(windowHeight * ratio);
       } else {
-        // Window is taller than the aspect ratio, so fit width
         setWidth(windowWidth);
         setHeight(windowWidth / ratio);
       }
     };
 
-    // Set initial size
     handleResize();
-
-    // Attach the resize event listener
     window.addEventListener("resize", handleResize);
 
-    // Cleanup the event listener on component unmount
     return () => window.removeEventListener("resize", handleResize);
   }, [ratio]);
 
@@ -51,6 +47,7 @@ const Home: React.FC = () => {
 
     hands.onResults((results: any) => {
       drawHands(results);
+      checkHover(results);
     });
 
     const video = videoRef.current;
@@ -88,44 +85,38 @@ const Home: React.FC = () => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Set canvas size to match video
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
-    // Draw video frame
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // MediaPipe hands connection array
     const HAND_CONNECTIONS = [
       [0, 1],
       [1, 2],
       [2, 3],
-      [3, 4], // Thumb
+      [3, 4],
       [0, 5],
       [5, 6],
       [6, 7],
-      [7, 8], // Index finger
+      [7, 8],
       [5, 9],
       [9, 10],
       [10, 11],
-      [11, 12], // Middle finger
+      [11, 12],
       [9, 13],
       [13, 14],
       [14, 15],
-      [15, 16], // Ring finger
+      [15, 16],
       [13, 17],
       [0, 17],
       [17, 18],
       [18, 19],
-      [19, 20], // Pinky finger
+      [19, 20],
     ];
 
-    // Draw hand landmarks and connections
     results.multiHandLandmarks?.forEach((landmarks: any) => {
-      // Draw connections
       HAND_CONNECTIONS.forEach(([start, end]) => {
         const startX = landmarks[start].x * canvas.width;
         const startY = landmarks[start].y * canvas.height;
@@ -140,22 +131,99 @@ const Home: React.FC = () => {
         ctx.stroke();
       });
 
-      // Draw landmarks
-      landmarks.forEach((landmark: any) => {
+      landmarks.forEach((landmark: any, idx: number) => {
         const x = landmark.x * canvas.width;
         const y = landmark.y * canvas.height;
 
         ctx.beginPath();
         ctx.arc(x, y, 5, 0, 2 * Math.PI);
-        ctx.fillStyle = "red";
+        if (idx == 8) {
+          ctx.fillStyle = "pink";
+        } else {
+          ctx.fillStyle = "red";
+        }
         ctx.fill();
       });
+    });
+  };
+
+  const checkHover = (results: any) => {
+    if (!buttonRef.current || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const buttonElement = buttonRef.current;
+
+    // Get button position and size relative to the canvas
+    const buttonLeft =
+      parseFloat(buttonElement.style.left || "0") * (canvas.width / width);
+    const buttonTop =
+      parseFloat(buttonElement.style.top || "0") * (canvas.height / height);
+    const buttonWidth =
+      parseFloat(buttonElement.style.width || "0") * (canvas.width / width);
+    const buttonHeight =
+      parseFloat(buttonElement.style.height || "0") * (canvas.height / height);
+
+    results.multiHandLandmarks?.forEach((landmarks: any) => {
+      const indexFingerTip = landmarks[8]; // Index finger tip landmark
+      const x = indexFingerTip.x * canvas.width;
+      const y = indexFingerTip.y * canvas.height;
+
+      const isHovering =
+        x >= buttonLeft &&
+        x <= buttonLeft + buttonWidth &&
+        y >= buttonTop &&
+        y <= buttonTop + buttonHeight;
+
+      console.log(
+        x >= buttonLeft,
+        x <= buttonLeft + buttonWidth,
+        y >= buttonTop,
+        y <= buttonTop + buttonHeight
+      );
+
+      if (isHovering) {
+        if (!hoverStartTime.current) {
+          hoverStartTime.current = performance.now();
+        } else if (performance.now() - hoverStartTime.current >= 5000) {
+          alert("Hello");
+          hoverStartTime.current = null; // Reset after activation
+        }
+      } else {
+        hoverStartTime.current = null; // Reset if not hovering
+      }
     });
   };
 
   return (
     <div className="w-full mx-auto flex justify-center items-center">
       <div className="relative">
+        <div
+          className="absolute top-0 left-0 z-10"
+          style={{
+            width: width,
+            height: height,
+          }}
+        >
+          <div
+            ref={buttonRef}
+            style={{
+              position: "absolute",
+              top: "30%",
+              left: "30%",
+              width: "100px",
+              height: "50px",
+              backgroundColor: "green",
+              textAlign: "center",
+              lineHeight: "50px",
+              color: "white",
+              fontWeight: "bold",
+              borderRadius: "8px",
+              pointerEvents: "none", // Prevent interaction
+            }}
+          >
+            Button
+          </div>
+        </div>
         <video
           ref={videoRef}
           style={{ width: width, height: height }}
@@ -164,10 +232,8 @@ const Home: React.FC = () => {
         ></video>
         <canvas
           ref={canvasRef}
+          className="absolute top-0 left-0"
           style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
             width: width,
             height: height,
           }}
