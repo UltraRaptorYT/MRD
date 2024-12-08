@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
+import { HAND_CONNECTIONS } from "@/lib/utils";
+import { CircularProgressbar } from "react-circular-progressbar";
+import "react-circular-progressbar/dist/styles.css";
 
 const Home: React.FC = () => {
   const [width, setWidth] = useState(640);
@@ -6,6 +9,9 @@ const Home: React.FC = () => {
   const ratio = 640 / 480;
   const buttonRef = useRef<HTMLDivElement>(null);
   const hoverStartTime = useRef<number | null>(null);
+  const progressTimer = useRef<NodeJS.Timeout | null>(null);
+  const [progress, setProgress] = useState(0);
+  const maxHoverTime = 2500; // Time in ms for full progress
 
   useEffect(() => {
     const handleResize = () => {
@@ -90,37 +96,17 @@ const Home: React.FC = () => {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
+    ctx.save();
+    ctx.scale(-1, 1); // Mirror horizontally
+    ctx.translate(-canvas.width, 0);
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    const HAND_CONNECTIONS = [
-      [0, 1],
-      [1, 2],
-      [2, 3],
-      [3, 4],
-      [0, 5],
-      [5, 6],
-      [6, 7],
-      [7, 8],
-      [5, 9],
-      [9, 10],
-      [10, 11],
-      [11, 12],
-      [9, 13],
-      [13, 14],
-      [14, 15],
-      [15, 16],
-      [13, 17],
-      [0, 17],
-      [17, 18],
-      [18, 19],
-      [19, 20],
-    ];
+    ctx.restore();
 
     results.multiHandLandmarks?.forEach((landmarks: any) => {
       HAND_CONNECTIONS.forEach(([start, end]) => {
-        const startX = landmarks[start].x * canvas.width;
+        const startX = canvas.width - landmarks[start].x * canvas.width;
         const startY = landmarks[start].y * canvas.height;
-        const endX = landmarks[end].x * canvas.width;
+        const endX = canvas.width - landmarks[end].x * canvas.width;
         const endY = landmarks[end].y * canvas.height;
 
         ctx.beginPath();
@@ -131,21 +117,23 @@ const Home: React.FC = () => {
         ctx.stroke();
       });
 
-      landmarks.forEach((landmark: any, idx: number) => {
-        const x = landmark.x * canvas.width;
+      landmarks.forEach((landmark: any) => {
+        const x = canvas.width - landmark.x * canvas.width;
         const y = landmark.y * canvas.height;
 
         ctx.beginPath();
         ctx.arc(x, y, 5, 0, 2 * Math.PI);
-        if (idx == 8) {
-          ctx.fillStyle = "pink";
-        } else {
-          ctx.fillStyle = "red";
-        }
+        ctx.fillStyle = "red";
         ctx.fill();
       });
     });
   };
+
+  useEffect(() => {
+    if (progress >= 100) {
+      alert("DONE");
+    }
+  }, [progress]);
 
   const checkHover = (results: any) => {
     if (!buttonRef.current || !canvasRef.current) return;
@@ -153,49 +141,62 @@ const Home: React.FC = () => {
     const canvas = canvasRef.current;
     const buttonElement = buttonRef.current;
 
-    // Get button position and size relative to the canvas
-    const buttonLeft =
-      parseFloat(buttonElement.style.left || "0") * (canvas.width / width);
-    const buttonTop =
-      parseFloat(buttonElement.style.top || "0") * (canvas.height / height);
-    const buttonWidth =
-      parseFloat(buttonElement.style.width || "0") * (canvas.width / width);
-    const buttonHeight =
-      parseFloat(buttonElement.style.height || "0") * (canvas.height / height);
+    const buttonRect = buttonElement.getBoundingClientRect();
+    const canvasRect = canvas.getBoundingClientRect();
+
+    const circleCenterX =
+      (buttonRect.left - canvasRect.left + buttonRect.width / 2) *
+      (canvas.width / canvasRect.width);
+    const circleCenterY =
+      (buttonRect.top - canvasRect.top + buttonRect.height / 2) *
+      (canvas.height / canvasRect.height);
+    const circleRadius =
+      (buttonRect.width / 2) * (canvas.width / canvasRect.width);
+
+    let isHovering = false;
 
     results.multiHandLandmarks?.forEach((landmarks: any) => {
-      const indexFingerTip = landmarks[8]; // Index finger tip landmark
-      const x = indexFingerTip.x * canvas.width;
-      const y = indexFingerTip.y * canvas.height;
+      landmarks.forEach((landmark: any) => {
+        const x = canvas.width - landmark.x * canvas.width; // Mirrored
+        const y = landmark.y * canvas.height;
 
-      const isHovering =
-        x >= buttonLeft &&
-        x <= buttonLeft + buttonWidth &&
-        y >= buttonTop &&
-        y <= buttonTop + buttonHeight;
+        const distance = Math.sqrt(
+          (x - circleCenterX) ** 2 + (y - circleCenterY) ** 2
+        );
 
-      console.log(
-        x >= buttonLeft,
-        x <= buttonLeft + buttonWidth,
-        y >= buttonTop,
-        y <= buttonTop + buttonHeight
-      );
-
-      if (isHovering) {
-        if (!hoverStartTime.current) {
-          hoverStartTime.current = performance.now();
-        } else if (performance.now() - hoverStartTime.current >= 5000) {
-          alert("Hello");
-          hoverStartTime.current = null; // Reset after activation
+        if (distance <= circleRadius) {
+          isHovering = true;
         }
-      } else {
-        hoverStartTime.current = null; // Reset if not hovering
-      }
+      });
     });
+
+    if (isHovering) {
+      if (!hoverStartTime.current) {
+        hoverStartTime.current = performance.now();
+        progressTimer.current = setInterval(() => {
+          const elapsed = performance.now() - hoverStartTime.current!;
+          const newProgress = Math.min((elapsed / maxHoverTime) * 100, 100); // Scale progress as a percentage
+
+          setProgress(newProgress);
+
+          if (newProgress >= 100) {
+            clearInterval(progressTimer.current!);
+            hoverStartTime.current = null;
+            progressTimer.current = null;
+          }
+        }, 50); // Update progress every 50ms
+      }
+    } else {
+      // Reset progress and hover time when not hovering
+      clearInterval(progressTimer.current!);
+      progressTimer.current = null;
+      hoverStartTime.current = null;
+      setProgress(0);
+    }
   };
 
   return (
-    <div className="w-full mx-auto flex justify-center items-center">
+    <div className="w-full mx-auto flex justify-center items-center h-full">
       <div className="relative">
         <div
           className="absolute top-0 left-0 z-10"
@@ -208,31 +209,25 @@ const Home: React.FC = () => {
             ref={buttonRef}
             style={{
               position: "absolute",
-              top: "30%",
-              left: "30%",
+              top: "70%",
+              left: "20%",
               width: "100px",
-              height: "50px",
-              backgroundColor: "green",
-              textAlign: "center",
-              lineHeight: "50px",
-              color: "white",
-              fontWeight: "bold",
-              borderRadius: "8px",
-              pointerEvents: "none", // Prevent interaction
+              height: "100px",
             }}
           >
-            Button
+            <CircularProgressbar value={progress} />
           </div>
         </div>
         <video
           ref={videoRef}
           style={{ width: width, height: height }}
+          className="-scale-x-100"
           playsInline
           muted
         ></video>
         <canvas
           ref={canvasRef}
-          className="absolute top-0 left-0"
+          className="absolute top-0 left-0 "
           style={{
             width: width,
             height: height,
