@@ -27,3 +27,19 @@
   height: 100vh;
   height: 100dvh;
 }
+
+@keyframes scale-in {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.point-animation {
+  animation: scale-in 0.5s ease-in-out forwards;
+  transform-origin: center;
+}

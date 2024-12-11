@@ -1,241 +1,152 @@
-import React, { useState, useEffect, useRef } from "react";
-import { HAND_CONNECTIONS } from "@/lib/utils";
-import { CircularProgressbar } from "react-circular-progressbar";
-import "react-circular-progressbar/dist/styles.css";
+import React, { useEffect, useRef, useState } from "react";
+// import heartImg from "@/assets/heart.png";
+import heartImg from "@/assets/BWM.png";
 
-const Home: React.FC = () => {
-  const [width, setWidth] = useState(640);
-  const [height, setHeight] = useState(480);
-  const ratio = 640 / 480;
-  const buttonRef = useRef<HTMLDivElement>(null);
-  const hoverStartTime = useRef<number | null>(null);
-  const progressTimer = useRef<NodeJS.Timeout | null>(null);
-  const [progress, setProgress] = useState(0);
-  const maxHoverTime = 2500; // Time in ms for full progress
+interface Point {
+  x: number;
+  y: number;
+  color: string;
+}
+
+const ImageToPoints: React.FC = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [points, setPoints] = useState<Point[]>([]);
+  const [width, setWidth] = useState(0);
+  const [height, setHeight] = useState(0);
+  const [visiblePoints, setVisiblePoints] = useState<Point[]>([]);
+  const skipPoints = 20;
 
   useEffect(() => {
     const handleResize = () => {
       const windowWidth = window.innerWidth;
       const windowHeight = window.innerHeight;
-
-      if (windowWidth / windowHeight > ratio) {
-        setHeight(windowHeight);
-        setWidth(windowHeight * ratio);
-      } else {
-        setWidth(windowWidth);
-        setHeight(windowWidth / ratio);
-      }
+      setWidth(windowWidth);
+      setHeight(windowHeight);
     };
 
     handleResize();
     window.addEventListener("resize", handleResize);
 
     return () => window.removeEventListener("resize", handleResize);
-  }, [ratio]);
-
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const { Hands } = window as any;
-
-    const hands = new Hands({
-      locateFile: (file: string) =>
-        `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
-    });
-
-    hands.setOptions({
-      maxNumHands: 2,
-      modelComplexity: 1,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5,
-    });
-
-    hands.onResults((results: any) => {
-      drawHands(results);
-      checkHover(results);
-    });
-
-    const video = videoRef.current;
-    if (video) {
-      navigator.mediaDevices
-        .getUserMedia({ video: true })
-        .then((stream) => {
-          video.srcObject = stream;
-          video.onloadedmetadata = () => {
-            video.play();
-            const processVideo = async () => {
-              if (
-                hands &&
-                video.readyState === HTMLMediaElement.HAVE_ENOUGH_DATA
-              ) {
-                await hands.send({ image: video });
-              }
-              requestAnimationFrame(processVideo);
-            };
-            processVideo();
-          };
-        })
-        .catch((err) => {
-          console.error("Error accessing camera:", err);
-        });
-    }
   }, []);
 
-  const drawHands = (results: any) => {
+  const handleImageLoad = (image: HTMLImageElement) => {
     const canvas = canvasRef.current;
-    const video = videoRef.current;
-
-    if (!canvas || !video) return;
+    if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Set canvas dimensions
+    canvas.width = width;
+    canvas.height = height;
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    // Calculate aspect ratio to fit the image in the canvas (object-contain behavior)
+    const imageAspectRatio = image.width / image.height;
+    const canvasAspectRatio = width / height;
 
-    ctx.save();
-    ctx.scale(-1, 1); // Mirror horizontally
-    ctx.translate(-canvas.width, 0);
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    ctx.restore();
+    let drawWidth, drawHeight, offsetX, offsetY;
 
-    results.multiHandLandmarks?.forEach((landmarks: any) => {
-      HAND_CONNECTIONS.forEach(([start, end]) => {
-        const startX = canvas.width - landmarks[start].x * canvas.width;
-        const startY = landmarks[start].y * canvas.height;
-        const endX = canvas.width - landmarks[end].x * canvas.width;
-        const endY = landmarks[end].y * canvas.height;
+    if (imageAspectRatio > canvasAspectRatio) {
+      // Image is wider than canvas
+      drawWidth = width;
+      drawHeight = width / imageAspectRatio;
+      offsetX = 0;
+      offsetY = (height - drawHeight) / 2; // Center vertically
+    } else {
+      // Image is taller than canvas
+      drawHeight = height;
+      drawWidth = height * imageAspectRatio;
+      offsetX = (width - drawWidth) / 2; // Center horizontally
+      offsetY = 0;
+    }
 
-        ctx.beginPath();
-        ctx.moveTo(startX, startY);
-        ctx.lineTo(endX, endY);
-        ctx.strokeStyle = "blue";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      });
+    // Clear canvas and draw the image with padding (if needed)
+    ctx.clearRect(0, 0, width, height);
+    ctx.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
 
-      landmarks.forEach((landmark: any) => {
-        const x = canvas.width - landmark.x * canvas.width;
-        const y = landmark.y * canvas.height;
+    // Get image data
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const { data } = imageData;
 
-        ctx.beginPath();
-        ctx.arc(x, y, 5, 0, 2 * Math.PI);
-        ctx.fillStyle = "red";
-        ctx.fill();
-      });
-    });
+    const extractedPoints: Point[] = [];
+    // Loop through the pixels (skipping some to sample)
+    for (let y = 0; y < height; y += skipPoints) {
+      for (let x = 0; x < width; x += skipPoints) {
+        const index = (y * width + x) * 4; // RGBA index
+        const r = data[index];
+        const g = data[index + 1];
+        const b = data[index + 2];
+        const alpha = data[index + 3];
+
+        // Add points based on a condition (e.g., non-transparent pixels)
+        if (alpha > 128) {
+          extractedPoints.push({ x, y, color: `rgb(${r},${g},${b})` });
+        }
+      }
+    }
+
+    // Shuffle the points randomly
+    for (let i = extractedPoints.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [extractedPoints[i], extractedPoints[j]] = [
+        extractedPoints[j],
+        extractedPoints[i],
+      ];
+    }
+
+    setPoints(extractedPoints);
   };
 
   useEffect(() => {
-    if (progress >= 100) {
-      alert("DONE");
+    if (points) {
+      console.log(points, "hi");
+      showPointsRandomly(points);
     }
-  }, [progress]);
+  }, [points]);
 
-  const checkHover = (results: any) => {
-    if (!buttonRef.current || !canvasRef.current) return;
+  const showPointsRandomly = (points: Point[]) => {
+    let index = 0;
 
-    const canvas = canvasRef.current;
-    const buttonElement = buttonRef.current;
-
-    const buttonRect = buttonElement.getBoundingClientRect();
-    const canvasRect = canvas.getBoundingClientRect();
-
-    const circleCenterX =
-      (buttonRect.left - canvasRect.left + buttonRect.width / 2) *
-      (canvas.width / canvasRect.width);
-    const circleCenterY =
-      (buttonRect.top - canvasRect.top + buttonRect.height / 2) *
-      (canvas.height / canvasRect.height);
-    const circleRadius =
-      (buttonRect.width / 2) * (canvas.width / canvasRect.width);
-
-    let isHovering = false;
-
-    results.multiHandLandmarks?.forEach((landmarks: any) => {
-      landmarks.forEach((landmark: any) => {
-        const x = canvas.width - landmark.x * canvas.width; // Mirrored
-        const y = landmark.y * canvas.height;
-
-        const distance = Math.sqrt(
-          (x - circleCenterX) ** 2 + (y - circleCenterY) ** 2
-        );
-
-        if (distance <= circleRadius) {
-          isHovering = true;
-        }
-      });
-    });
-
-    if (isHovering) {
-      if (!hoverStartTime.current) {
-        hoverStartTime.current = performance.now();
-        progressTimer.current = setInterval(() => {
-          const elapsed = performance.now() - hoverStartTime.current!;
-          const newProgress = Math.min((elapsed / maxHoverTime) * 100, 100); // Scale progress as a percentage
-
-          setProgress(newProgress);
-
-          if (newProgress >= 100) {
-            clearInterval(progressTimer.current!);
-            hoverStartTime.current = null;
-            progressTimer.current = null;
-          }
-        }, 50); // Update progress every 50ms
+    console.log(points.length, points[points.length - 1]);
+    const interval = setInterval(() => {
+      if (index >= points.length - 1 || !points[index]) {
+        clearInterval(interval);
+        return;
       }
-    } else {
-      // Reset progress and hover time when not hovering
-      clearInterval(progressTimer.current!);
-      progressTimer.current = null;
-      hoverStartTime.current = null;
-      setProgress(0);
-    }
+      let currentPoint = { ...points[index] };
+      console.log(index, points[index], currentPoint);
+      setVisiblePoints((prev) => [...prev, { ...currentPoint }]);
+      index++;
+    }, 50); // Delay in milliseconds between points
   };
 
+  useEffect(() => {
+    const img = new Image();
+    img.src = heartImg;
+    img.onload = () => handleImageLoad(img);
+  }, [width, height]);
+
   return (
-    <div className="w-full mx-auto flex justify-center items-center h-full">
-      <div className="relative">
-        <div
-          className="absolute top-0 left-0 z-10"
-          style={{
-            width: width,
-            height: height,
-          }}
-        >
-          <div
-            ref={buttonRef}
-            style={{
-              position: "absolute",
-              top: "70%",
-              left: "20%",
-              width: "100px",
-              height: "100px",
-            }}
-          >
-            <CircularProgressbar value={progress} />
-          </div>
-        </div>
-        <video
-          ref={videoRef}
-          style={{ width: width, height: height }}
-          className="-scale-x-100"
-          playsInline
-          muted
-        ></video>
-        <canvas
-          ref={canvasRef}
-          className="absolute top-0 left-0 "
-          style={{
-            width: width,
-            height: height,
-          }}
-        ></canvas>
+    <div>
+      <canvas ref={canvasRef} style={{ display: "none" }}></canvas>
+      <div className="relative" style={{ width: width, height: height }}>
+        {visiblePoints.map((point, index) => {
+          return (
+            <img
+              key={index}
+              className="absolute w-20 point-animation"
+              style={{
+                top: point.y,
+                left: point.x,
+              }}
+              src="https://sgyouthai.org/events/Cedar%20Girls%20Secondary%20School/photo_2024-04-22_17-46-24.jpg"
+            />
+          );
+        })}
       </div>
     </div>
   );
 };
 
-export default Home;
+export default ImageToPoints;
