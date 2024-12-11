@@ -128,7 +128,7 @@ const ImageToPoints: React.FC = () => {
   }, [width, height]);
 
   return (
-    <div>
+    <div className="w-full h-full overflow-hidden">
       <canvas ref={canvasRef} style={{ display: "none" }}></canvas>
       <div className="relative" style={{ width: width, height: height }}>
         {visiblePoints.map((point, index) => {

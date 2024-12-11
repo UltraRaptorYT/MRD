@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { HAND_CONNECTIONS } from "@/lib/utils";
-import { CircularProgressbar } from "react-circular-progressbar";
+import {
+  CircularProgressbarWithChildren,
+  buildStyles,
+} from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
 
 const Room: React.FC = () => {
@@ -11,7 +14,7 @@ const Room: React.FC = () => {
   const hoverStartTime = useRef<number | null>(null);
   const progressTimer = useRef<NodeJS.Timeout | null>(null);
   const [progress, setProgress] = useState(0);
-  const maxHoverTime = 2500; // Time in ms for full progress
+  const maxHoverTime = 1500; // Time in ms for full progress
 
   useEffect(() => {
     const handleResize = () => {
@@ -215,7 +218,17 @@ const Room: React.FC = () => {
               height: "100px",
             }}
           >
-            <CircularProgressbar value={progress} />
+            <CircularProgressbarWithChildren
+              value={progress}
+              styles={buildStyles({
+                pathTransition:
+                  progress === 0 ? "none" : "stroke-dashoffset 0.5s ease 0s",
+                textColor: "pink",
+              })}
+              strokeWidth={12.5}
+            >
+              <div className="bg-pink-500 w-14 h-14 rounded-full"></div>
+            </CircularProgressbarWithChildren>
           </div>
         </div>
         <video
