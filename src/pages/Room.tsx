@@ -140,7 +140,7 @@ const Room: React.FC = () => {
     if (progress >= 100) {
       setRandomX(Math.floor(Math.random() * 91));
       setRandomY(Math.floor(Math.random() * 91));
-      setScale(Math.floor(Math.random()));
+      setScale(Math.floor(Math.random()) + 0.5);
     }
   }, [progress]);
 
