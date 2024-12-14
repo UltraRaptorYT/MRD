@@ -18,6 +18,7 @@ const Room: React.FC = () => {
   const maxHoverTime = 500; // Time in ms for full progress
   const [randomX, setRandomX] = useState(20);
   const [randomY, setRandomY] = useState(70);
+  const [scale, setScale] = useState(1);
 
   useEffect(() => {
     const handleResize = () => {
@@ -139,6 +140,7 @@ const Room: React.FC = () => {
     if (progress >= 100) {
       setRandomX(Math.floor(Math.random() * 91));
       setRandomY(Math.floor(Math.random() * 91));
+      setScale(Math.floor(Math.random()));
     }
   }, [progress]);
 
@@ -220,6 +222,7 @@ const Room: React.FC = () => {
               left: `${randomX}%`,
               width: "100px",
               height: "100px",
+              scale: scale,
             }}
           >
             <CircularProgressbarWithChildren
