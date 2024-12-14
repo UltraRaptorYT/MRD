@@ -15,6 +15,8 @@ const Room: React.FC = () => {
   const progressTimer = useRef<NodeJS.Timeout | null>(null);
   const [progress, setProgress] = useState(0);
   const maxHoverTime = 1500; // Time in ms for full progress
+  const [randomX, setRandomX] = useState(20);
+  const [randomY, setRandomY] = useState(70);
 
   useEffect(() => {
     const handleResize = () => {
@@ -135,6 +137,8 @@ const Room: React.FC = () => {
   useEffect(() => {
     if (progress >= 100) {
       alert("DONE");
+      setRandomX(Math.floor(Math.random() * 101));
+      setRandomY(Math.floor(Math.random() * 101));
     }
   }, [progress]);
 
@@ -212,8 +216,8 @@ const Room: React.FC = () => {
             ref={buttonRef}
             style={{
               position: "absolute",
-              top: "70%",
-              left: "20%",
+              top: `${randomY}%`,
+              left: `${randomX}%`,
               width: "100px",
               height: "100px",
             }}

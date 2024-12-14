@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 // import heartImg from "@/assets/heart.png";
-import heartImg from "@/assets/BWM.png";
+// import heartImg from "@/assets/BWM.png";
+import heartImg from "@/assets/hearttest.png";
 
 interface Point {
   x: number;
@@ -14,7 +15,8 @@ const ImageToPoints: React.FC = () => {
   const [width, setWidth] = useState(0);
   const [height, setHeight] = useState(0);
   const [visiblePoints, setVisiblePoints] = useState<Point[]>([]);
-  const skipPoints = 20;
+  const skipPoints = 90;
+  const [completeAnimation, setCompleteAnimation] = useState<boolean>(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -114,6 +116,12 @@ const ImageToPoints: React.FC = () => {
         clearInterval(interval);
         return;
       }
+      if (index >= points.length - 2) {
+        setTimeout(() => {
+          console.log("HI");
+          setCompleteAnimation(true);
+        }, 500*5);
+      }
       let currentPoint = { ...points[index] };
       console.log(index, points[index], currentPoint);
       setVisiblePoints((prev) => [...prev, { ...currentPoint }]);
@@ -130,17 +138,32 @@ const ImageToPoints: React.FC = () => {
   return (
     <div className="w-full h-full overflow-hidden">
       <canvas ref={canvasRef} style={{ display: "none" }}></canvas>
-      <div className="relative" style={{ width: width, height: height }}>
+      <div></div>
+      <div
+        className="relative"
+        style={{
+          width: width,
+          height: height,
+          transform: completeAnimation ? "scale(0.1)" : "scale(1)",
+          transition: "all ease-in-out 3s",
+        }}
+      >
         {visiblePoints.map((point, index) => {
           return (
             <img
               key={index}
-              className="absolute w-20 point-animation"
+              className="absolute w-36 point-animation"
               style={{
                 top: point.y,
                 left: point.x,
               }}
-              src="https://sgyouthai.org/events/Cedar%20Girls%20Secondary%20School/photo_2024-04-22_17-46-24.jpg"
+              src={
+                index % 3 == 0
+                  ? "https://hlzsmadaanjcpyjghntc.supabase.co/storage/v1/object/public/mrd/kj.jpg?t=2024-12-14T05%3A35%3A36.563Z"
+                  : index % 3 == 1
+                  ? "https://hlzsmadaanjcpyjghntc.supabase.co/storage/v1/object/public/mrd/hy.jpeg?t=2024-12-14T05%3A38%3A32.334Z"
+                  : "https://hlzsmadaanjcpyjghntc.supabase.co/storage/v1/object/public/mrd/lm.jpg?t=2024-12-14T05%3A35%3A42.608Z"
+              }
             />
           );
         })}
