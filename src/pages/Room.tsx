@@ -14,7 +14,8 @@ const Room: React.FC = () => {
   const hoverStartTime = useRef<number | null>(null);
   const progressTimer = useRef<NodeJS.Timeout | null>(null);
   const [progress, setProgress] = useState(0);
-  const maxHoverTime = 1500; // Time in ms for full progress
+  // const maxHoverTime = 1500; // Time in ms for full progress
+  const maxHoverTime = 500; // Time in ms for full progress
   const [randomX, setRandomX] = useState(20);
   const [randomY, setRandomY] = useState(70);
 
