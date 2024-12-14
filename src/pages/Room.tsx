@@ -222,7 +222,7 @@ const Room: React.FC = () => {
               left: `${randomX}%`,
               width: "100px",
               height: "100px",
-              scale: scale,
+              transform: `scale(${scale})`,
             }}
           >
             <CircularProgressbarWithChildren
