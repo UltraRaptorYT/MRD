@@ -136,7 +136,6 @@ const Room: React.FC = () => {
 
   useEffect(() => {
     if (progress >= 100) {
-      alert("DONE");
       setRandomX(Math.floor(Math.random() * 101));
       setRandomY(Math.floor(Math.random() * 101));
     }
